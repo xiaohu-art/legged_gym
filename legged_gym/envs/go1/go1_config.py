@@ -31,11 +31,11 @@
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
 class Go1RoughCfg( LeggedRobotCfg ):
-    class env( LeggedRobotCfg.env ):
-        num_observations = 48
+    # class env( LeggedRobotCfg.env ):
+    #     num_observations = 48
         
-    class terrain( LeggedRobotCfg.terrain ):
-        measure_heights = False
+    # class terrain( LeggedRobotCfg.terrain ):
+    #     measure_heights = False
 
     class init_state( LeggedRobotCfg.init_state ):
         pos = [0.0, 0.0, 0.42] # x,y,z [m]
@@ -59,8 +59,8 @@ class Go1RoughCfg( LeggedRobotCfg ):
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
         control_type = 'P'
-        stiffness = {'joint': 40.}  # [N*m/rad]
-        damping = {'joint': 1.0}     # [N*m*s/rad]
+        stiffness = {'joint': 20.}  # [N*m/rad]
+        damping = {'joint': 0.5}     # [N*m*s/rad]
         # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.25
         # decimation: Number of control action updates @ sim DT per policy DT
@@ -73,6 +73,7 @@ class Go1RoughCfg( LeggedRobotCfg ):
         penalize_contacts_on = ["thigh", "calf"]
         terminate_after_contacts_on = ["base"]
         self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
+        flip_visual_attachments = False # Some .obj meshes must be flipped from y-up to z-up
   
     class rewards( LeggedRobotCfg.rewards ):
         soft_dof_pos_limit = 0.9
@@ -85,6 +86,8 @@ class Go1RoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
     class runner( LeggedRobotCfgPPO.runner ):
+        max_iterations = 3500
+
         run_name = ''
         experiment_name = 'rough_go1'
 

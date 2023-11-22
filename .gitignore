@@ -54,6 +54,9 @@ Thumbs.db
 logs
 runs
 
+# videos
+videos
+
 # other
 *.egg-info
 __pycache__
