@@ -13,6 +13,7 @@ class LeggedRobotHistory(LeggedRobot):
                                        dtype=torch.float32, 
                                        device=self.sim_device,
                                        requires_grad=False)
+        print("here is a info")
         
     def get_observations(self):
         return self.obs_history
