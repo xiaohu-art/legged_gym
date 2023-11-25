@@ -33,9 +33,12 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 class Go1HistoryCfg( LeggedRobotCfg ):
     class env( LeggedRobotCfg.env ):
         # num_observations = 48
-        obs_history_length = 2
+        obs_history_length = 1
         num_actor_observation = 235
         num_privileged_obs = 235
+
+    # class terrain( LeggedRobotCfg.terrain ):
+    #     measure_heights = False
 
     class init_state( LeggedRobotCfg.init_state ):
         pos = [0.0, 0.0, 0.42] # x,y,z [m]

@@ -35,6 +35,7 @@ import isaacgym
 from isaacgym import gymapi
 from legged_gym.envs import *
 from legged_gym.utils import  get_args, export_policy_as_jit, task_registry, Logger
+from legged_gym.envs.wrapper.HistoryWrapper import LeggedRobotHistory
 
 import numpy as np
 import torch
@@ -55,6 +56,7 @@ def play(args):
 
     # prepare environment
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
+    env = LeggedRobotHistory(env)
     obs = env.get_observations()
     # load policy
     train_cfg.runner.resume = True
