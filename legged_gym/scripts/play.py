@@ -43,10 +43,12 @@ import torch
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 50)
+    # env_cfg.env.num_envs = min(env_cfg.env.num_envs, 50)
+    env_cfg.env.num_envs = 1
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
     env_cfg.terrain.curriculum = False
+    env_cfg.terrain.terrain_proportions = [0.0, 0.0, 0.5, 0.5, 0.0]
     env_cfg.noise.add_noise = False
     env_cfg.domain_rand.randomize_friction = False
     env_cfg.domain_rand.push_robots = False
@@ -104,9 +106,17 @@ def play(args):
 
     frames = []
 
-    for i in range(10*int(env.max_episode_length)):
+    from tqdm import tqdm
+    for i in tqdm(range(2*int(env.max_episode_length))):
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
+
+        if FIX_COMMAND:
+            env.commands[:, 0] = 1.
+            env.commands[:, 1] = 0.
+            env.commands[:, 2] = 0.
+            env.commands[:, -1] = 0.
+
         if RECORD_FRAMES:
             name = str(img_idx).zfill(4)
             filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'frames', name + ".png")
@@ -166,5 +176,6 @@ if __name__ == '__main__':
     EXPORT_POLICY = True
     RECORD_FRAMES = False
     MOVE_CAMERA = False
+    FIX_COMMAND = True
     args = get_args()
     play(args)
