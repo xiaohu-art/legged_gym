@@ -58,9 +58,9 @@ class OnPolicyRunner:
             num_critic_obs = self.env.num_privileged_obs 
         else:
             num_critic_obs = self.env.num_obs
-        if self.env.num_history_observations is not None:
+        try:
             num_actor_obs = self.env.num_history_observations
-        else:
+        except:
             num_actor_obs = self.env.num_obs
         actor_critic_class = eval(self.cfg["policy_class_name"]) # ActorCritic
         actor_critic: ActorCritic = actor_critic_class( num_actor_obs,

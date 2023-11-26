@@ -33,7 +33,7 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 class Go1HistoryCfg( LeggedRobotCfg ):
     class env( LeggedRobotCfg.env ):
         # num_observations = 48
-        obs_history_length = 1
+        obs_history_length = 2
         num_actor_observation = 235
         num_privileged_obs = 235
 
@@ -89,7 +89,7 @@ class Go1HistoryCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
     class runner( LeggedRobotCfgPPO.runner ):
-        max_iterations = 3000
+        max_iterations = 2500
 
         run_name = ''
         experiment_name = 'rough_go1'
