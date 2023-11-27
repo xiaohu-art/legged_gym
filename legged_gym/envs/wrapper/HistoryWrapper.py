@@ -46,12 +46,12 @@ class LeggedRobotHistory(gym.Wrapper):
     def step(self, action):
         obs, privileged_obs, rew, reset, extras = self.env.step(action)
         privileged_obs = obs.clone()
-        self.obs_history = torch.cat((self.obs_history[:, self.num_actor_observation:], obs.clone()), dim=-1)
+        self.obs_history = torch.cat((self.obs_history[:, self.num_actor_observation:], obs[:, 3:48]), dim=-1)
         return self.obs_history, privileged_obs, rew, reset, extras
     
     def get_observations(self):
         obs = self.env.get_observations()
-        self.obs_history = torch.cat((self.obs_history[:, self.num_actor_observation:], obs.clone()), dim=-1)
+        self.obs_history = torch.cat((self.obs_history[:, self.num_actor_observation:], obs[:, 3:48]), dim=-1)
         return self.obs_history
     
     def reset_idx(self, env_ids):

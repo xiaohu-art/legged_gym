@@ -55,6 +55,15 @@ Paper: https://arxiv.org/abs/2109.11978
     - A video will be generate under the folder `legged_gym/videos/your_experiment_name`.
     - Other runs/model iteration can be selected by setting `load_run` and `checkpoint` in the train config.
 
+3. Reproduce the baseline results:  
+```python legged_gym/scripts/train.py --task=go1-history --history (--headless) --experiment=1_history_45_actor_235_critic```
+
+    change config file in `legged_gym/env/wrapper/HistoryWrapper.py` as:
+    - obs_history_length = 1 # class env (LeggedRobotCfg.env)
+    - num_actor_observation = 45
+    - num_privileged_obs = 235
+    - measure_heights = True # class terrain (LeggedRobotCfg.terrain)
+
 ### Adding a new environment ###
 The base environment `legged_robot` implements a rough terrain locomotion task. The corresponding cfg does not specify a robot asset (URDF/ MJCF) and has no reward scales. 
 

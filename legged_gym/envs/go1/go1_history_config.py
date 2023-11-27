@@ -33,8 +33,8 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 class Go1HistoryCfg( LeggedRobotCfg ):
     class env( LeggedRobotCfg.env ):
         # num_observations = 48
-        obs_history_length = 3
-        num_actor_observation = 235
+        obs_history_length = 1
+        num_actor_observation = 45
         num_privileged_obs = 235
 
     # class terrain( LeggedRobotCfg.terrain ):
