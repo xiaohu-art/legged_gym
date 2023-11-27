@@ -30,11 +30,15 @@
 
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
+NUM_HISTORY_LENGTH = 5
+NUM_ACTOR_OBSERVATION = 45
+NUM_HISTORY_OBSERVATION = NUM_HISTORY_LENGTH * NUM_ACTOR_OBSERVATION
+
 class Go1HistoryCfg( LeggedRobotCfg ):
     class env( LeggedRobotCfg.env ):
         # num_observations = 48
-        obs_history_length = 1
-        num_actor_observation = 45
+        obs_history_length = NUM_HISTORY_LENGTH
+        num_actor_observation = NUM_ACTOR_OBSERVATION
         num_privileged_obs = 235
 
     # class terrain( LeggedRobotCfg.terrain ):
@@ -82,8 +86,21 @@ class Go1HistoryCfg( LeggedRobotCfg ):
         soft_dof_pos_limit = 0.9
         base_height_target = 0.25
         class scales( LeggedRobotCfg.rewards.scales ):
-            torques = -0.0002
-            dof_pos_limits = -10.0
+            termination = -0.0
+            tracking_lin_vel = 1.0
+            tracking_ang_vel = 0.5
+            lin_vel_z = -2.0
+            ang_vel_xy = -0.05
+            orientation = -0.2
+            torques = -0.00001
+            dof_vel = -0.
+            dof_acc = -2.5e-7
+            base_height = -1.0
+            feet_air_time =  1.0
+            collision = -1.
+            feet_stumble = -0.0 
+            action_rate = -0.01
+            stand_still = -0.
 
 class Go1HistoryCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
@@ -93,5 +110,15 @@ class Go1HistoryCfgPPO( LeggedRobotCfgPPO ):
 
         run_name = ''
         experiment_name = 'rough_go1'
+
+    class adaptation:
+        beta = 4.0
+        activation = 'elu'
+        num_latent_dim = 16
+        num_actor_observation = NUM_ACTOR_OBSERVATION
+        num_history_observation = NUM_HISTORY_OBSERVATION
+        
+        encoder_hidden_dims = [128, 64]
+        decoder_hidden_dims = [64, 128]
 
   

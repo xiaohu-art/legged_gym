@@ -33,12 +33,15 @@ import torch.nn as nn
 import torch.optim as optim
 
 from rsl_rl.modules import ActorCritic
+from rsl_rl.modules import Adaptation
 from rsl_rl.storage import RolloutStorage
 
 class PPO:
     actor_critic: ActorCritic
+    adapter: Adaptation
     def __init__(self,
                  actor_critic,
+                 adapter,
                  num_learning_epochs=1,
                  num_mini_batches=1,
                  clip_param=0.2,
@@ -63,8 +66,13 @@ class PPO:
         # PPO components
         self.actor_critic = actor_critic
         self.actor_critic.to(self.device)
+
+        self.adapter = adapter
+        self.adapter.to(self.device)
+
         self.storage = None # initialized later
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
+        self.adapter_optimizer = optim.Adam(self.adapter.parameters(), lr=learning_rate)
         self.transition = RolloutStorage.Transition()
 
         # PPO parameters
@@ -91,7 +99,8 @@ class PPO:
         if self.actor_critic.is_recurrent:
             self.transition.hidden_states = self.actor_critic.get_hidden_states()
         # Compute the actions and values
-        self.transition.actions = self.actor_critic.act(obs).detach()
+        v_hat = self.adapter.encode(obs).detach()
+        self.transition.actions = self.actor_critic.act(obs, velocity=v_hat).detach()
         self.transition.values = self.actor_critic.evaluate(critic_obs).detach()
         self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
         self.transition.action_mean = self.actor_critic.action_mean.detach()
@@ -117,7 +126,26 @@ class PPO:
         last_values= self.actor_critic.evaluate(last_critic_obs).detach()
         self.storage.compute_returns(last_values, self.gamma, self.lam)
 
-    def update(self):
+    def update_adapter(self):
+        mean_velocity_loss = 0
+        assert not self.actor_critic.is_recurrent
+        generator = self.storage.mini_batch_generator(self.num_mini_batches, 1)
+        for obs_batch, critic_obs_batch, _, _, _, _, _, _, _, _, _ in generator:
+
+                v_hat = self.adapter.encode(obs_batch)
+                v_target = critic_obs_batch[:, :3]
+                velocity_loss = (v_hat - v_target).pow(2).mean()
+                self.adapter_optimizer.zero_grad()
+                velocity_loss.backward()
+                self.adapter_optimizer.step()
+
+                mean_velocity_loss += velocity_loss.item()
+
+        num_updates = 1 * self.num_mini_batches
+        mean_velocity_loss /= num_updates
+        return mean_velocity_loss
+
+    def update(self, m_reward):
         mean_value_loss = 0
         mean_surrogate_loss = 0
         if self.actor_critic.is_recurrent:
@@ -127,8 +155,13 @@ class PPO:
         for obs_batch, critic_obs_batch, actions_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, \
             old_mu_batch, old_sigma_batch, hid_states_batch, masks_batch in generator:
 
-
-                self.actor_critic.act(obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
+                v_hat = self.adapter.encode(obs_batch).detach()
+                std_boot, mean_boot = torch.std_mean(m_reward)
+                p_boot = 1.0 - torch.tanh(std_boot / mean_boot)
+                # AdaBoot
+                if p_boot.item() < torch.rand(1):
+                    v_hat = critic_obs_batch[:, :3].clone().detach()
+                self.actor_critic.act(obs_batch, velocity=v_hat, masks=masks_batch, hidden_states=hid_states_batch[0])
                 actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
                 value_batch = self.actor_critic.evaluate(critic_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1])
                 mu_batch = self.actor_critic.action_mean

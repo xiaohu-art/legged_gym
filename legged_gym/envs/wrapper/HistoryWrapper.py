@@ -47,6 +47,7 @@ class LeggedRobotHistory(gym.Wrapper):
         obs, privileged_obs, rew, reset, extras = self.env.step(action)
         privileged_obs = obs.clone()
         self.obs_history = torch.cat((self.obs_history[:, self.num_actor_observation:], obs[:, 3:48]), dim=-1)
+        extras['reconstruction_target'] = obs[:, 3:48]
         return self.obs_history, privileged_obs, rew, reset, extras
     
     def get_observations(self):

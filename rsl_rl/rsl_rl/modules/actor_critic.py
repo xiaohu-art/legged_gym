@@ -51,7 +51,7 @@ class ActorCritic(nn.Module):
 
         activation = get_activation(activation)
 
-        mlp_input_dim_a = num_actor_obs
+        mlp_input_dim_a = num_actor_obs + 3
         mlp_input_dim_c = num_critic_obs
 
         # Policy
@@ -121,7 +121,9 @@ class ActorCritic(nn.Module):
         self.distribution = Normal(mean, mean*0. + self.std)
 
     def act(self, observations, **kwargs):
-        self.update_distribution(observations)
+        velocity = kwargs['velocity']
+        actor_input = torch.cat([observations, velocity], dim=-1)
+        self.update_distribution(actor_input)
         return self.distribution.sample()
     
     def get_actions_log_prob(self, actions):
