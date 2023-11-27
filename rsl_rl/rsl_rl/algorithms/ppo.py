@@ -116,7 +116,8 @@ class PPO:
         # Bootstrapping on time outs
         if 'time_outs' in infos:
             self.transition.rewards += self.gamma * torch.squeeze(self.transition.values * infos['time_outs'].unsqueeze(1).to(self.device), 1)
-
+        # Record the reconstruction target for predicting next observation
+        self.transition.reconstruction_target = infos['reconstruction_target']
         # Record the transition
         self.storage.add_transitions(self.transition)
         self.transition.clear()
@@ -130,7 +131,7 @@ class PPO:
         mean_velocity_loss = 0
         assert not self.actor_critic.is_recurrent
         generator = self.storage.mini_batch_generator(self.num_mini_batches, 1)
-        for obs_batch, critic_obs_batch, _, _, _, _, _, _, _, _, _ in generator:
+        for obs_batch, critic_obs_batch, rec_target_batch, _, _, _, _, _, _, _, _, _ in generator:
 
                 v_hat = self.adapter.encode(obs_batch)
                 v_target = critic_obs_batch[:, :3]
@@ -152,13 +153,14 @@ class PPO:
             generator = self.storage.reccurent_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
         else:
             generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
-        for obs_batch, critic_obs_batch, actions_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, \
+        for obs_batch, critic_obs_batch, rec_target_batch, actions_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, \
             old_mu_batch, old_sigma_batch, hid_states_batch, masks_batch in generator:
 
                 v_hat = self.adapter.encode(obs_batch).detach()
+
+                # AdaBoot
                 std_boot, mean_boot = torch.std_mean(m_reward)
                 p_boot = 1.0 - torch.tanh(std_boot / mean_boot)
-                # AdaBoot
                 if p_boot.item() < torch.rand(1):
                     v_hat = critic_obs_batch[:, :3].clone().detach()
                 self.actor_critic.act(obs_batch, velocity=v_hat, masks=masks_batch, hidden_states=hid_states_batch[0])

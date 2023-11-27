@@ -86,21 +86,8 @@ class Go1HistoryCfg( LeggedRobotCfg ):
         soft_dof_pos_limit = 0.9
         base_height_target = 0.25
         class scales( LeggedRobotCfg.rewards.scales ):
-            termination = -0.0
-            tracking_lin_vel = 1.0
-            tracking_ang_vel = 0.5
-            lin_vel_z = -2.0
-            ang_vel_xy = -0.05
-            orientation = -0.2
-            torques = -0.00001
-            dof_vel = -0.
-            dof_acc = -2.5e-7
-            base_height = -1.0
-            feet_air_time =  1.0
-            collision = -1.
-            feet_stumble = -0.0 
-            action_rate = -0.01
-            stand_still = -0.
+            torques = -0.0002
+            dof_pos_limits = -10.0
 
 class Go1HistoryCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
@@ -115,6 +102,7 @@ class Go1HistoryCfgPPO( LeggedRobotCfgPPO ):
         beta = 4.0
         activation = 'elu'
         num_latent_dim = 16
+        # obs_history_length = NUM_HISTORY_LENGTH
         num_actor_observation = NUM_ACTOR_OBSERVATION
         num_history_observation = NUM_HISTORY_OBSERVATION
         
