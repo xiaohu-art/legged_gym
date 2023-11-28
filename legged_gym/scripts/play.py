@@ -111,7 +111,10 @@ def play(args):
 
     from tqdm import tqdm
     for i in tqdm(range(2*int(env.max_episode_length))):
-        actions = policy(obs.detach())
+        velocity = ppo_runner.alg.adapter.encode(obs.detach())[0].detach()
+        mu = ppo_runner.alg.adapter.encode(obs.detach())[1].detach()
+        policy_i = torch.cat([obs.detach(), velocity, mu], dim=-1).detach()
+        actions = policy(policy_i)
         obs, _, rews, dones, infos = env.step(actions.detach())
 
         if FIX_COMMAND:

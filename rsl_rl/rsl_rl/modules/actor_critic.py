@@ -51,7 +51,7 @@ class ActorCritic(nn.Module):
 
         activation = get_activation(activation)
 
-        mlp_input_dim_a = num_actor_obs + 3
+        mlp_input_dim_a = num_actor_obs + 3 + 16
         mlp_input_dim_c = num_critic_obs
 
         # Policy
@@ -122,7 +122,8 @@ class ActorCritic(nn.Module):
 
     def act(self, observations, **kwargs):
         velocity = kwargs['velocity']
-        actor_input = torch.cat([observations, velocity], dim=-1)
+        latent= kwargs['latent']
+        actor_input = torch.cat([observations, velocity, latent], dim=-1)
         self.update_distribution(actor_input)
         return self.distribution.sample()
     

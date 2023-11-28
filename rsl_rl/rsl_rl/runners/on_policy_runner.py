@@ -75,7 +75,7 @@ class OnPolicyRunner:
         self.save_interval = self.cfg["save_interval"]
 
         # init storage and model
-        self.alg.init_storage(self.env.num_envs, self.num_steps_per_env, [num_actor_obs], [self.env.num_privileged_obs], [self.env.num_obs], [self.env.num_actions])
+        self.alg.init_storage(self.env.num_envs, self.num_steps_per_env, [num_actor_obs], [self.env.num_privileged_obs], [self.env.num_actor_observation], [self.env.num_actions])
 
         # Log
         self.log_dir = log_dir
@@ -135,7 +135,7 @@ class OnPolicyRunner:
                 start = stop
                 self.alg.compute_returns(critic_obs)
 
-            mean_velocity_loss = self.alg.update_adapter()
+            mean_velocity_loss, mean_rec_loss, mean_KL_loss = self.alg.update_adapter()
             mean_value_loss, mean_surrogate_loss = self.alg.update(cur_reward_sum)
             stop = time.time()
             learn_time = stop - start
@@ -171,6 +171,8 @@ class OnPolicyRunner:
         fps = int(self.num_steps_per_env * self.env.num_envs / (locs['collection_time'] + locs['learn_time']))
 
         self.writer.add_scalar('Loss/velocity', locs['mean_velocity_loss'], locs['it'])
+        self.writer.add_scalar('Loss/rec_loss', locs['mean_rec_loss'], locs['it'])
+        self.writer.add_scalar('Loss/KL_loss', locs['mean_KL_loss'], locs['it'])
         self.writer.add_scalar('Loss/value_function', locs['mean_value_loss'], locs['it'])
         self.writer.add_scalar('Loss/surrogate', locs['mean_surrogate_loss'], locs['it'])
         self.writer.add_scalar('Loss/learning_rate', self.alg.learning_rate, locs['it'])
@@ -221,7 +223,9 @@ class OnPolicyRunner:
     def save(self, path, infos=None):
         torch.save({
             'model_state_dict': self.alg.actor_critic.state_dict(),
+            'adapter_state_dict': self.alg.adapter.state_dict(),
             'optimizer_state_dict': self.alg.optimizer.state_dict(),
+            'adaptation_optimizer_state_dict': self.alg.adapter_optimizer.state_dict(),
             'iter': self.current_learning_iteration,
             'infos': infos,
             }, path)
@@ -229,8 +233,10 @@ class OnPolicyRunner:
     def load(self, path, load_optimizer=True):
         loaded_dict = torch.load(path)
         self.alg.actor_critic.load_state_dict(loaded_dict['model_state_dict'])
+        self.alg.adapter.load_state_dict(loaded_dict['adapter_state_dict'])
         if load_optimizer:
             self.alg.optimizer.load_state_dict(loaded_dict['optimizer_state_dict'])
+            self.alg.adapter_optimizer.load_state_dict(loaded_dict['adaptation_optimizer_state_dict'])
         self.current_learning_iteration = loaded_dict['iter']
         return loaded_dict['infos']
 

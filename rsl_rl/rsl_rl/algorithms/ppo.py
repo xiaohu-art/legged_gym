@@ -86,8 +86,8 @@ class PPO:
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
 
-    def init_storage(self, num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, action_shape):
-        self.storage = RolloutStorage(num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, action_shape, self.device)
+    def init_storage(self, num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, rec_shape, action_shape):
+        self.storage = RolloutStorage(num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, rec_shape, action_shape, self.device)
 
     def test_mode(self):
         self.actor_critic.test()
@@ -99,8 +99,9 @@ class PPO:
         if self.actor_critic.is_recurrent:
             self.transition.hidden_states = self.actor_critic.get_hidden_states()
         # Compute the actions and values
-        v_hat = self.adapter.encode(obs).detach()
-        self.transition.actions = self.actor_critic.act(obs, velocity=v_hat).detach()
+        v_hat = self.adapter.encode(obs)[0].detach()
+        mu = self.adapter.encode(obs)[1].detach()
+        self.transition.actions = self.actor_critic.act(obs, velocity=v_hat, latent=mu).detach()
         self.transition.values = self.actor_critic.evaluate(critic_obs).detach()
         self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
         self.transition.action_mean = self.actor_critic.action_mean.detach()
@@ -129,22 +130,36 @@ class PPO:
 
     def update_adapter(self):
         mean_velocity_loss = 0
+        mean_rec_loss = 0
+        mean_KL_loss = 0
         assert not self.actor_critic.is_recurrent
-        generator = self.storage.mini_batch_generator(self.num_mini_batches, 1)
+        generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
         for obs_batch, critic_obs_batch, rec_target_batch, _, _, _, _, _, _, _, _, _ in generator:
 
-                v_hat = self.adapter.encode(obs_batch)
+                v_hat, mu, logvar = self.adapter.encode(obs_batch)
                 v_target = critic_obs_batch[:, :3]
                 velocity_loss = (v_hat - v_target).pow(2).mean()
+
+                z = self.adapter.sample(mu, logvar)
+                rec_obs = self.adapter.decode(v_hat, z)
+                rec_loss = (rec_obs - rec_target_batch).pow(2).mean()
+
+                KL_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+                loss = velocity_loss + rec_loss + self.adapter.beta * KL_loss
+
                 self.adapter_optimizer.zero_grad()
-                velocity_loss.backward()
+                loss.backward()
                 self.adapter_optimizer.step()
 
                 mean_velocity_loss += velocity_loss.item()
+                mean_rec_loss += rec_loss.item()
+                mean_KL_loss += KL_loss.item()
 
-        num_updates = 1 * self.num_mini_batches
+        num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_velocity_loss /= num_updates
-        return mean_velocity_loss
+        mean_rec_loss /= num_updates
+        mean_KL_loss /= num_updates
+        return mean_velocity_loss, mean_rec_loss, mean_KL_loss
 
     def update(self, m_reward):
         mean_value_loss = 0
@@ -156,14 +171,14 @@ class PPO:
         for obs_batch, critic_obs_batch, rec_target_batch, actions_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, \
             old_mu_batch, old_sigma_batch, hid_states_batch, masks_batch in generator:
 
-                v_hat = self.adapter.encode(obs_batch).detach()
-
+                v_hat = self.adapter.encode(obs_batch)[0].detach()
+                mu = self.adapter.encode(obs_batch)[1].detach()
                 # AdaBoot
                 std_boot, mean_boot = torch.std_mean(m_reward)
                 p_boot = 1.0 - torch.tanh(std_boot / mean_boot)
                 if p_boot.item() < torch.rand(1):
                     v_hat = critic_obs_batch[:, :3].clone().detach()
-                self.actor_critic.act(obs_batch, velocity=v_hat, masks=masks_batch, hidden_states=hid_states_batch[0])
+                self.actor_critic.act(obs_batch, velocity=v_hat, latent=mu, masks=masks_batch, hidden_states=hid_states_batch[0])
                 actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
                 value_batch = self.actor_critic.evaluate(critic_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1])
                 mu_batch = self.actor_critic.action_mean

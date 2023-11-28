@@ -26,7 +26,7 @@ class Adaptation(nn.Module):
                 encoder_layers.append(self.activation)
 
         decoder_layers = []
-        decoder_layers.append(nn.Linear(num_latent_dim + 3, decoder_hidden_dims[0]))
+        decoder_layers.append(nn.Linear(3 + num_latent_dim, decoder_hidden_dims[0]))
         decoder_layers.append(self.activation)
         for l in range(len(decoder_hidden_dims)):
             if l == len(decoder_hidden_dims) - 1:
@@ -43,8 +43,11 @@ class Adaptation(nn.Module):
 
     def encode(self, observations):
         x = self.encoder(observations)
-        x = self.velocity(x)
-        return x
+        velocity = self.velocity(x)
+
+        mu = self.mu(x)
+        logvar = self.logvar(x)
+        return velocity, mu, logvar
     
     def sample(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
