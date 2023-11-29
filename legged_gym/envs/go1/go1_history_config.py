@@ -93,13 +93,13 @@ class Go1HistoryCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
     class runner( LeggedRobotCfgPPO.runner ):
-        max_iterations = 2500
+        max_iterations = 5000
 
         run_name = ''
         experiment_name = 'rough_go1'
 
     class adaptation:
-        beta = 4.0
+        beta = 1.0
         activation = 'elu'
         num_latent_dim = 16
         # obs_history_length = NUM_HISTORY_LENGTH
@@ -108,5 +108,3 @@ class Go1HistoryCfgPPO( LeggedRobotCfgPPO ):
         
         encoder_hidden_dims = [128, 64]
         decoder_hidden_dims = [64, 128]
-
-  

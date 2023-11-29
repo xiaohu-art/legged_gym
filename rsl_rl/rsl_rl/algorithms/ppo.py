@@ -128,34 +128,36 @@ class PPO:
         last_values= self.actor_critic.evaluate(last_critic_obs).detach()
         self.storage.compute_returns(last_values, self.gamma, self.lam)
 
-    def update_adapter(self):
+    def update_adapter(self, obs, critic_obs, next_obs):
+        obs = obs.to(self.device)
+        critic_obs = critic_obs.to(self.device)
+        next_obs = next_obs.to(self.device)
+        
         mean_velocity_loss = 0
         mean_rec_loss = 0
         mean_KL_loss = 0
-        assert not self.actor_critic.is_recurrent
-        generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
-        for obs_batch, critic_obs_batch, rec_target_batch, _, _, _, _, _, _, _, _, _ in generator:
+    
+        for i in range(self.num_learning_epochs):
+            v_hat, mu, logvar = self.adapter.encode(obs)
+            v_target = critic_obs[:, :3]
+            velocity_loss = (v_hat - v_target).pow(2).mean()
 
-                v_hat, mu, logvar = self.adapter.encode(obs_batch)
-                v_target = critic_obs_batch[:, :3]
-                velocity_loss = (v_hat - v_target).pow(2).mean()
+            z = self.adapter.sample(mu, logvar)
+            rec_obs = self.adapter.decode(v_hat, z)
+            rec_loss = (rec_obs - next_obs).pow(2).mean()
 
-                z = self.adapter.sample(mu, logvar)
-                rec_obs = self.adapter.decode(v_hat, z)
-                rec_loss = (rec_obs - rec_target_batch).pow(2).mean()
+            KL_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+            loss = velocity_loss + rec_loss + self.adapter.beta * KL_loss
 
-                KL_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-                loss = velocity_loss + rec_loss + self.adapter.beta * KL_loss
+            self.adapter_optimizer.zero_grad()
+            loss.backward()
+            self.adapter_optimizer.step()
 
-                self.adapter_optimizer.zero_grad()
-                loss.backward()
-                self.adapter_optimizer.step()
+            mean_velocity_loss += velocity_loss.item()
+            mean_rec_loss += rec_loss.item()
+            mean_KL_loss += KL_loss.item()
 
-                mean_velocity_loss += velocity_loss.item()
-                mean_rec_loss += rec_loss.item()
-                mean_KL_loss += KL_loss.item()
-
-        num_updates = self.num_learning_epochs * self.num_mini_batches
+        num_updates = self.num_learning_epochs
         mean_velocity_loss /= num_updates
         mean_rec_loss /= num_updates
         mean_KL_loss /= num_updates

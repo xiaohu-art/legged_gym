@@ -64,6 +64,11 @@ Paper: https://arxiv.org/abs/2109.11978
     - num_privileged_obs = 235
     - measure_heights = True # class terrain (LeggedRobotCfg.terrain)
 
+4. Reproduce the DreamWaq:
+```python legged_gym/scripts/train.py --task=go1-history --history (--headless) --experiment=dreamwaq```
+
+    the newest result is stored in `legged_gym/logs/adapter_online_beta_1`  
+
 ### Adding a new environment ###
 The base environment `legged_robot` implements a rough terrain locomotion task. The corresponding cfg does not specify a robot asset (URDF/ MJCF) and has no reward scales. 
 
