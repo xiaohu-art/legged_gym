@@ -30,12 +30,13 @@
 
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
-class Go1TeacherCfg( LeggedRobotCfg ):
+class Go1RMACfg( LeggedRobotCfg ):
     class env( LeggedRobotCfg.env ):
         num_observations = 237
         num_base_obs = 45
         num_height_obs = 187
         num_extrinsic_obs = 5
+        num_history = 50
         num_latent = 16
 
     class init_state( LeggedRobotCfg.init_state ):
@@ -83,7 +84,7 @@ class Go1TeacherCfg( LeggedRobotCfg ):
             torques = -0.0002
             dof_pos_limits = -10.0
 
-class Go1TeacherCfgPPO( LeggedRobotCfgPPO ):
+class Go1RMACfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
     class runner( LeggedRobotCfgPPO.runner ):

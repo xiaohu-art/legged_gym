@@ -29,3 +29,4 @@
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
 from .teacher_runner import TeacherRunner
+from .student_runner import StudentRunner

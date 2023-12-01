@@ -113,4 +113,13 @@ class ActorCriticTeacher(ActorCritic):
         latent = self.adaptation_module(torch.cat([height_obses, extrinsic_obses], dim=-1))
         critic_obses = torch.cat([base_obses, latent], dim=-1)
         return super().evaluate(critic_obses, **kwargs)
+    
+    def act_teacher(self, observations):
+        with torch.inference_mode():
+            base_obses = self.get_base_obs(observations)
+            height_obses = self.get_height_obs(observations)
+            extrinsic_obses = self.get_extrinsic_obs(observations)
+            latent = self.adaptation_module(torch.cat([height_obses, extrinsic_obses], dim=-1))
+            actor_obses = torch.cat([base_obses, latent], dim=-1)
+            return super().act_inference(actor_obses), latent
 

@@ -39,7 +39,7 @@ from .cassie.cassie import Cassie
 from .cassie.cassie_config import CassieRoughCfg, CassieRoughCfgPPO
 from .a1.a1_config import A1RoughCfg, A1RoughCfgPPO
 from .go1.go1_config import Go1RoughCfg, Go1RoughCfgPPO
-from .go1.go1_teacher import Go1TeacherCfg, Go1TeacherCfgPPO
+from .go1.go1_rma import Go1RMACfg, Go1RMACfgPPO
 
 
 import os
@@ -52,4 +52,4 @@ task_registry.register( "anymal_b", Anymal, AnymalBRoughCfg(), AnymalBRoughCfgPP
 task_registry.register( "cassie", Cassie, CassieRoughCfg(), CassieRoughCfgPPO() )
 task_registry.register( "a1", LeggedRobot, A1RoughCfg(), A1RoughCfgPPO() )
 task_registry.register( "go1", LeggedRobot, Go1RoughCfg(), Go1RoughCfgPPO() )
-task_registry.register( "go1-teacher", LeggedRobot, Go1TeacherCfg(), Go1TeacherCfgPPO() )
+task_registry.register( "go1-rma", LeggedRobot, Go1RMACfg(), Go1RMACfgPPO() )
