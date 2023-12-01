@@ -38,10 +38,11 @@ import torch
 
 from rsl_rl.algorithms import PPO
 from rsl_rl.modules import ActorCritic, ActorCriticRecurrent
+from rsl_rl.modules import ActorCriticTeacher
 from rsl_rl.env import VecEnv
 
 
-class OnPolicyRunner:
+class TeacherRunner:
 
     def __init__(self,
                  env: VecEnv,
@@ -54,15 +55,20 @@ class OnPolicyRunner:
         self.policy_cfg = train_cfg["policy"]
         self.device = device
         self.env = env
+        self.env_cfg = self.env.cfg.env
         if self.env.num_privileged_obs is not None:
             num_critic_obs = self.env.num_privileged_obs 
         else:
             num_critic_obs = self.env.num_obs
-        actor_critic_class = eval(self.cfg["policy_class_name"]) # ActorCritic
-        actor_critic: ActorCritic = actor_critic_class( self.env.num_obs,
-                                                        num_critic_obs,
-                                                        self.env.num_actions,
-                                                        **self.policy_cfg).to(self.device)
+        actor_critic_class = eval(self.cfg["policy_class_name"]) # ActorCriticTeacher
+        actor_critic = actor_critic_class(  self.env.num_obs,
+                                            self.env_cfg.num_base_obs,
+                                            self.env_cfg.num_height_obs,
+                                            self.env_cfg.num_extrinsic_obs,
+                                            num_critic_obs,
+                                            self.env_cfg.num_latent,
+                                            self.env.num_actions,
+                                            **self.policy_cfg).to(self.device)
         alg_class = eval(self.cfg["algorithm_class_name"]) # PPO
         self.alg: PPO = alg_class(actor_critic, device=self.device, **self.alg_cfg)
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
